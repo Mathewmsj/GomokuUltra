@@ -1,37 +1,34 @@
-# Gomoku Ultra
+# GomokuUltra
 
-A beautiful and feature-rich Gomoku (Five-in-a-Row) game in Java, with special pieces and strategy points!
+五子棋 Ultra 版，支持多种特殊棋子和策略点玩法。
 
-## Features
-- Classic Gomoku gameplay (15x15 board, Black vs White)
-- Strategy points system: gain points by placing normal pieces, spend them to use special pieces
-- Special pieces:
-  - **Obstacle Piece**: Block a cell for 4 turns
-  - **Freeze Piece**: Freeze a 3x3 area for 5 turns, enemy pieces in the area cannot form a line, both sides cannot place pieces there
-  - **Annihilate Piece**: Remove an enemy normal or obstacle piece
-  - **Bomb Piece**: Instantly destroy all pieces in a 3x3 area (unfreezes freeze pieces)
-  - **Override Piece**: Place your normal piece anywhere (even on enemy, obstacle, or freeze area), overriding the original
-- Beautiful UI with clear buttons and effects
-- Bomb special effect (screen flashes red)
-- Game rules popup at start
-- English interface
+## 玩法简介
+- 普通棋子：每落一子获得1点策略点。
+- 障碍棋、冻结棋、炸弹棋、覆盖棋等特殊棋子，详见游戏内规则说明。
 
-## How to Run
-1. Make sure you have Java 8 or above installed.
-2. In the project directory, run:
-   ```sh
-   java -jar GomokuUltra.jar
-   ```
+## 运行方法
+```bash
+# 编译
+javac -d out src/*.java
+# 运行（假设主类为 Main）
+java -cp out Main
+```
 
-## Game Rules (Summary)
-1. **Normal Piece (Black/White)**: Gain 1 strategy point per move.
-2. **Obstacle Piece**: Costs 2 points, place on an empty cell, lasts 4 turns, you can continue to move after placing.
-3. **Freeze Piece**: Costs 5 points, place anywhere, lasts 5 turns, freezes a 3x3 area. Enemy pieces in the area cannot form a line, and both sides cannot place pieces in the area.
-4. **Annihilate Piece**: Costs 2 points, remove an enemy normal or obstacle piece.
-5. **Bomb Piece**: Costs 5 points, place anywhere, instantly destroys all pieces in a 3x3 area (if a freeze piece is in the area, it is removed and the area is unfrozen), you can continue to move after placing.
-6. **Override Piece**: Costs 15 points, place your normal piece anywhere (including freeze area, obstacles, or enemy pieces), overrides the original.
-7. White starts with 1 strategy point.
-8. No moves allowed after someone wins.
+## 依赖环境
+- JDK 8 及以上
+- Java Swing（标准库）
 
-## Author
-- Powered by Java & Cursor AI 
+## 项目结构示例
+```
+GomokuUltra/
+├── src/                # 源代码目录，存放 .java 文件
+├── out/                # 编译输出目录，存放 .class 文件（不上传）
+├── dist/               # 发布目录，存放 jar 文件
+├── assets/             # 资源文件（如图片、音效等，若有）
+├── .gitignore
+├── README.md
+├── LICENSE
+```
+
+## 作者
+- [你的名字](https://github.com/你的GitHub用户名) 
