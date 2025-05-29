@@ -168,6 +168,22 @@ public class GamePanel extends JPanel implements MouseListener {
             }
             repaint();
         });
+        // Override Piece
+        overrideBtn.addActionListener(e -> {
+            if (players[currentPlayer].remainOverride <= 0) {
+                message = "No Override Piece left!";
+            } else if (players[currentPlayer].strategyPoints >= 15) {
+                message = "Click anywhere to override with your piece";
+                waitingForOverride = true;
+                waitingForObstacle = false;
+                waitingForFreeze = false;
+                waitingForBomb = false;
+                waitingForRemove = false;
+            } else {
+                message = "Not enough strategy points!";
+            }
+            repaint();
+        });
     }
 
     private boolean waitingForObstacle = false;
@@ -690,7 +706,7 @@ public class GamePanel extends JPanel implements MouseListener {
                 "2. Obstacle Piece (2 pts, 5 per player): Place on an empty cell to block it for 4 turns. Cannot be placed on frozen or occupied cells.\n" +
                 "3. Freeze Piece (5 pts, 3 per player): Place anywhere. After 3 turns, activates and freezes a 3x3 area for 5 turns. Frozen areas cannot be used for victory, and no pieces can be placed there.\n" +
                 "4. Bomb Piece (5 pts, 3 per player): Place anywhere. After 3 turns, explodes and clears a 3x3 area. If a Freeze Piece is in the area, it is removed and the area is unfrozen.\n" +
-                "5. Remove Piece (3 pts, 3 per player): Attempt to remove any piece (including special pieces and your own). First use has 25% success rate, each subsequent use increases by 25% (max 100%). If used on a pending Bomb/Freeze, also uses probability. If used on a Bomb/Freeze already on the board and fails, 25% chance to trigger its effect immediately.\n" +
+                "5. Remove Piece (3 pts, 3 per player): Attempt to remove any piece (including special pieces and your own). First use has 25% success rate, \neach subsequent use increases by 25% (max 100%). If used on a pending Bomb/Freeze, also uses probability. If used on a Bomb/Freeze already on the board and fails, 25% chance to trigger its effect immediately.\n" +
                 "6. Override Piece (15 pts, 3 per player): Place your normal piece anywhere (even on special pieces or frozen areas), overriding the original.\n" +
                 "7. Each special piece has a limited number of uses per player per game.\n" +
                 "8. Pending (delayed) Bomb/Freeze can be removed by Remove Piece, also with probability.\n" +
