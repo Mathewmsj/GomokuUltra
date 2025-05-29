@@ -45,4 +45,4 @@ GomokuUltra/
 ```
 
 ## Author
-- [Your Name](https://github.com/YourGitHubUsername) 
+- [Mathewmsj](https://github.com/Mathewmsj) 
