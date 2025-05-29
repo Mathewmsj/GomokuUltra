@@ -12,7 +12,7 @@ public class GamePanel extends JPanel implements MouseListener {
     public EffectManager effectManager;
     public boolean waitingForFreeze = false;
     public boolean waitingForBomb = false;
-    public boolean waitingForAnnihilate = false;
+    public boolean waitingForRemove = false;
     public int freezeWaitPlayer = -1;
     public int bombWaitPlayer = -1;
     public int freezeWaitX = -1, freezeWaitY = -1;
@@ -21,6 +21,10 @@ public class GamePanel extends JPanel implements MouseListener {
     private boolean gameOver = false;
     private boolean waitingForOverride = false;
     private boolean showBombEffect = false;
+    private int pendingBombX = -1, pendingBombY = -1, bombDelay = 0;
+    private int pendingFreezeX = -1, pendingFreezeY = -1, freezeDelay = 0;
+    private JButton freezeBtn, bombBtn, removeBtn, obstacleBtn, overrideBtn;
+    private JLabel freezeStatusLabel, bombStatusLabel, removeStatusLabel, obstacleStatusLabel, overrideStatusLabel;
 
     public GamePanel() {
         setPreferredSize(new Dimension(870, 680));
@@ -53,96 +57,44 @@ public class GamePanel extends JPanel implements MouseListener {
         int btnY = 100;
         int btnGap = 18;
 
-        JButton obstacleBtn = new JButton("Obstacle Piece (2 pts)");
+        obstacleBtn = new JButton("Obstacle Piece (2 pts)");
         obstacleBtn.setBounds(btnX, btnY, btnWidth, btnHeight);
-        obstacleBtn.addActionListener(e -> {
-            if (players[currentPlayer].strategyPoints >= 2) {
-                message = "Click an empty cell to place an obstacle piece";
-                waitingForAnnihilate = false;
-                waitingForFreeze = false;
-                waitingForBomb = false;
-                waitingForObstacle = true;
-                waitingForOverride = false;
-            } else {
-                message = "Not enough strategy points!";
-            }
-            repaint();
-        });
         add(obstacleBtn);
+        obstacleStatusLabel = new JLabel();
+        obstacleStatusLabel.setBounds(btnX + btnWidth + 10, btnY, 30, btnHeight);
+        add(obstacleStatusLabel);
         btnY += btnHeight + btnGap;
 
-        JButton freezeBtn = new JButton("Freeze Piece (5 pts)");
+        freezeBtn = new JButton("Freeze Piece (5 pts)");
         freezeBtn.setBounds(btnX, btnY, btnWidth, btnHeight);
-        freezeBtn.addActionListener(e -> {
-            if (players[currentPlayer].strategyPoints >= 5) {
-                message = "Click anywhere to place a freeze piece";
-                waitingForFreeze = true;
-                freezeWaitPlayer = currentPlayer;
-                waitingForAnnihilate = false;
-                waitingForBomb = false;
-                waitingForObstacle = false;
-                waitingForOverride = false;
-            } else {
-                message = "Not enough strategy points!";
-            }
-            repaint();
-        });
         add(freezeBtn);
+        freezeStatusLabel = new JLabel();
+        freezeStatusLabel.setBounds(btnX + btnWidth + 10, btnY, 30, btnHeight);
+        add(freezeStatusLabel);
         btnY += btnHeight + btnGap;
 
-        JButton annihilateBtn = new JButton("Annihilate Piece (2 pts)");
-        annihilateBtn.setBounds(btnX, btnY, btnWidth, btnHeight);
-        annihilateBtn.addActionListener(e -> {
-            if (players[currentPlayer].strategyPoints >= 2) {
-                message = "Click an enemy piece or obstacle to annihilate";
-                waitingForAnnihilate = true;
-                waitingForFreeze = false;
-                waitingForBomb = false;
-                waitingForObstacle = false;
-                waitingForOverride = false;
-            } else {
-                message = "Not enough strategy points!";
-            }
-            repaint();
-        });
-        add(annihilateBtn);
+        removeBtn = new JButton("Remove Piece (3 pts)");
+        removeBtn.setBounds(btnX, btnY, btnWidth, btnHeight);
+        add(removeBtn);
+        removeStatusLabel = new JLabel();
+        removeStatusLabel.setBounds(btnX + btnWidth + 10, btnY, 30, btnHeight);
+        add(removeStatusLabel);
         btnY += btnHeight + btnGap;
 
-        JButton bombBtn = new JButton("Bomb Piece (5 pts)");
+        bombBtn = new JButton("Bomb Piece (5 pts)");
         bombBtn.setBounds(btnX, btnY, btnWidth, btnHeight);
-        bombBtn.addActionListener(e -> {
-            if (players[currentPlayer].strategyPoints >= 5) {
-                message = "Click anywhere to place a bomb piece";
-                waitingForBomb = true;
-                bombWaitPlayer = currentPlayer;
-                waitingForFreeze = false;
-                waitingForAnnihilate = false;
-                waitingForObstacle = false;
-                waitingForOverride = false;
-            } else {
-                message = "Not enough strategy points!";
-            }
-            repaint();
-        });
         add(bombBtn);
+        bombStatusLabel = new JLabel();
+        bombStatusLabel.setBounds(btnX + btnWidth + 10, btnY, 30, btnHeight);
+        add(bombStatusLabel);
         btnY += btnHeight + btnGap;
 
-        JButton overrideBtn = new JButton("Override Piece (15 pts)");
+        overrideBtn = new JButton("Override Piece (15 pts)");
         overrideBtn.setBounds(btnX, btnY, btnWidth, btnHeight);
-        overrideBtn.addActionListener(e -> {
-            if (players[currentPlayer].strategyPoints >= 15) {
-                message = "Click anywhere to override with your piece";
-                waitingForOverride = true;
-                waitingForAnnihilate = false;
-                waitingForFreeze = false;
-                waitingForBomb = false;
-                waitingForObstacle = false;
-            } else {
-                message = "Not enough strategy points!";
-            }
-            repaint();
-        });
         add(overrideBtn);
+        overrideStatusLabel = new JLabel();
+        overrideStatusLabel.setBounds(btnX + btnWidth + 10, btnY, 30, btnHeight);
+        add(overrideStatusLabel);
         btnY += btnHeight + btnGap;
 
         JButton restartBtn = new JButton("Restart");
@@ -152,6 +104,70 @@ public class GamePanel extends JPanel implements MouseListener {
             repaint();
         });
         add(restartBtn);
+
+        // Obstacle Piece
+        obstacleBtn.addActionListener(e -> {
+            if (players[currentPlayer].remainObstacle <= 0) {
+                message = "No Obstacle Piece left!";
+            } else if (players[currentPlayer].strategyPoints >= 2) {
+                message = "Click an empty cell to place an obstacle piece";
+                waitingForRemove = false;
+                waitingForFreeze = false;
+                waitingForBomb = false;
+                waitingForObstacle = true;
+                waitingForOverride = false;
+            } else {
+                message = "Not enough strategy points!";
+            }
+            repaint();
+        });
+        // Freeze Piece
+        freezeBtn.addActionListener(e -> {
+            if (players[currentPlayer].remainFreeze <= 0) {
+                message = "No Freeze Piece left!";
+            } else if (players[currentPlayer].strategyPoints >= 5) {
+                message = "Click anywhere to place a freeze piece";
+                waitingForFreeze = true;
+                freezeWaitPlayer = currentPlayer;
+                waitingForObstacle = false;
+                waitingForOverride = false;
+            } else {
+                message = "Not enough strategy points!";
+            }
+            repaint();
+        });
+        // Remove Piece
+        removeBtn.addActionListener(e -> {
+            if (players[currentPlayer].remainRemove <= 0) {
+                message = "No Remove Piece left!";
+            } else if (players[currentPlayer].strategyPoints >= 3) {
+                message = "Click an enemy piece or obstacle to remove";
+                waitingForRemove = true;
+                waitingForFreeze = false;
+                waitingForBomb = false;
+                waitingForObstacle = false;
+                waitingForOverride = false;
+            } else {
+                message = "Not enough strategy points!";
+            }
+            repaint();
+        });
+        // Bomb Piece
+        bombBtn.addActionListener(e -> {
+            if (players[currentPlayer].remainBomb <= 0) {
+                message = "No Bomb Piece left!";
+            } else if (players[currentPlayer].strategyPoints >= 5) {
+                message = "Click anywhere to place a bomb piece";
+                waitingForBomb = true;
+                bombWaitPlayer = currentPlayer;
+                waitingForFreeze = false;
+                waitingForObstacle = false;
+                waitingForOverride = false;
+            } else {
+                message = "Not enough strategy points!";
+            }
+            repaint();
+        });
     }
 
     private boolean waitingForObstacle = false;
@@ -202,6 +218,23 @@ public class GamePanel extends JPanel implements MouseListener {
         if (showBombEffect) {
             g.setColor(new Color(255, 0, 0, 120));
             g.fillRect(0, 0, getWidth(), getHeight());
+        }
+        // 预览即将生效的冰冻棋和炸弹棋
+        if (pendingFreezeX != -1 && pendingFreezeY != -1 && freezeDelay > 0) {
+            int cx = OFFSET + pendingFreezeX * CELL_SIZE;
+            int cy = OFFSET + pendingFreezeY * CELL_SIZE;
+            g.setColor(new Color(0, 191, 255, 120)); // 半透明蓝色
+            g.fillOval(cx - CELL_SIZE / 2, cy - CELL_SIZE / 2, CELL_SIZE, CELL_SIZE);
+            g.setColor(new Color(0, 191, 255, 200));
+            g.drawOval(cx - CELL_SIZE / 2, cy - CELL_SIZE / 2, CELL_SIZE, CELL_SIZE);
+        }
+        if (pendingBombX != -1 && pendingBombY != -1 && bombDelay > 0) {
+            int cx = OFFSET + pendingBombX * CELL_SIZE;
+            int cy = OFFSET + pendingBombY * CELL_SIZE;
+            g.setColor(new Color(255, 0, 0, 120)); // 半透明红色
+            g.fillOval(cx - CELL_SIZE / 2, cy - CELL_SIZE / 2, CELL_SIZE, CELL_SIZE);
+            g.setColor(new Color(255, 0, 0, 200));
+            g.drawOval(cx - CELL_SIZE / 2, cy - CELL_SIZE / 2, CELL_SIZE, CELL_SIZE);
         }
         // UI
         g.setColor(Color.BLACK);
@@ -283,9 +316,16 @@ public class GamePanel extends JPanel implements MouseListener {
         if (waitingForObstacle) {
             if (cell.piece instanceof EmptyPiece && !cell.piece.isFrozenArea) {
                 cell.piece = new ObstaclePiece(currentPlayer, 3);
-                player.strategyPoints -= 2;
+                players[currentPlayer].strategyPoints -= 2;
+                players[currentPlayer].remainObstacle--;
                 message = "Obstacle placed! You can continue to move.";
                 waitingForObstacle = false;
+                if (checkWin(x, y)) {
+                    message = (currentPlayer == 0 ? "Black" : "White") + " wins!";
+                    gameOver = true;
+                    repaint();
+                    return;
+                }
             } else {
                 message = "Can only place on empty cell!";
             }
@@ -293,43 +333,160 @@ public class GamePanel extends JPanel implements MouseListener {
             return;
         }
         if (waitingForFreeze) {
-            cell.piece = new FreezePiece(currentPlayer, 5);
-            // Mark freeze area
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dy = -1; dy <= 1; dy++) {
-                    int nx = x + dx, ny = y + dy;
-                    if (inBoard(nx, ny)) {
-                        board[nx][ny].piece.isFrozenArea = true;
-                    }
-                }
-            }
-            player.strategyPoints -= 5;
-            message = "Freeze piece placed!";
+            pendingFreezeX = x;
+            pendingFreezeY = y;
+            freezeDelay = 3;
+            players[currentPlayer].strategyPoints -= 5;
+            players[currentPlayer].remainFreeze--;
+            message = "Freeze Piece will activate in 3 turns!";
             waitingForFreeze = false;
+            if (checkWin(x, y)) {
+                message = (currentPlayer == 0 ? "Black" : "White") + " wins!";
+                gameOver = true;
+                repaint();
+                return;
+            }
             nextTurn();
             repaint();
             return;
         }
-        if (waitingForAnnihilate) {
-            if ((cell.piece instanceof NormalPiece || cell.piece instanceof ObstaclePiece) && cell.piece.owner != currentPlayer) {
+        if (waitingForRemove) {
+            // 允许移除延迟中的预览炸弹棋
+            if (pendingBombX == x && pendingBombY == y && bombDelay > 0) {
+                int rand = (int)(Math.random() * 100) + 1;
+                boolean success = rand <= player.removeSuccessRate;
+                player.strategyPoints -= 3;
+                player.remainRemove--;
+                if (success) {
+                    pendingBombX = pendingBombY = -1;
+                    bombDelay = 0;
+                    message = "Pending Bomb Piece removed! (" + player.removeSuccessRate + "% chance)";
+                } else {
+                    message = "Remove failed! (" + player.removeSuccessRate + "% chance)";
+                }
+                player.removeSuccessRate = Math.min(100, player.removeSuccessRate + 25);
+                waitingForRemove = false;
+                repaint();
+                return;
+            }
+            // 允许移除延迟中的预览冰冻棋
+            if (pendingFreezeX == x && pendingFreezeY == y && freezeDelay > 0) {
+                int rand = (int)(Math.random() * 100) + 1;
+                boolean success = rand <= player.removeSuccessRate;
+                player.strategyPoints -= 3;
+                player.remainRemove--;
+                if (success) {
+                    pendingFreezeX = pendingFreezeY = -1;
+                    freezeDelay = 0;
+                    message = "Pending Freeze Piece removed! (" + player.removeSuccessRate + "% chance)";
+                } else {
+                    message = "Remove failed! (" + player.removeSuccessRate + "% chance)";
+                }
+                player.removeSuccessRate = Math.min(100, player.removeSuccessRate + 25);
+                waitingForRemove = false;
+                repaint();
+                return;
+            }
+            boolean isBombOrFreeze = (cell.piece instanceof BombPiece) || (cell.piece instanceof FreezePiece);
+            int rand = (int)(Math.random() * 100) + 1;
+            boolean success = rand <= player.removeSuccessRate;
+            boolean triggerEffect = false;
+            if (isBombOrFreeze && !success) {
+                int triggerRand = (int)(Math.random() * 100) + 1;
+                triggerEffect = triggerRand <= 25;
+            }
+            if (cell.piece instanceof EmptyPiece) {
+                message = "Cannot remove an empty cell!";
+            } else if (success) {
                 cell.piece = new EmptyPiece();
-                player.strategyPoints -= 2;
-                message = "Annihilate successful!";
-                waitingForAnnihilate = false;
+                player.strategyPoints -= 3;
+                player.remainRemove--;
+                message = "Remove successful! (" + player.removeSuccessRate + "% chance)";
+                player.removeSuccessRate = Math.min(100, player.removeSuccessRate + 25);
+                waitingForRemove = false;
+                if (checkWin(x, y)) {
+                    message = (currentPlayer == 0 ? "Black" : "White") + " wins!";
+                    gameOver = true;
+                    repaint();
+                    return;
+                }
+                nextTurn();
+            } else if (isBombOrFreeze && triggerEffect) {
+                if (cell.piece instanceof BombPiece) {
+                    int bx = x, by = y;
+                    for (int dx = -1; dx <= 1; dx++) {
+                        for (int dy = -1; dy <= 1; dy++) {
+                            int nx = bx + dx, ny = by + dy;
+                            if (inBoard(nx, ny)) {
+                                Cell c = board[nx][ny];
+                                if (c.piece instanceof FreezePiece) {
+                                    c.piece = new EmptyPiece();
+                                    c.piece.isFrozenArea = false;
+                                    for (int ddx = -1; ddx <= 1; ddx++) {
+                                        for (int ddy = -1; ddy <= 1; ddy++) {
+                                            int nnx = nx + ddx, nny = ny + ddy;
+                                            if (inBoard(nnx, nny)) {
+                                                board[nnx][nny].piece.isFrozenArea = false;
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    c.piece = new EmptyPiece();
+                                }
+                            }
+                        }
+                    }
+                    triggerBombEffect();
+                } else if (cell.piece instanceof FreezePiece) {
+                    int fx = x, fy = y;
+                    board[fx][fy].piece = new FreezePiece(currentPlayer, 5);
+                    for (int dx = -1; dx <= 1; dx++) {
+                        for (int dy = -1; dy <= 1; dy++) {
+                            int nx = fx + dx, ny = fy + dy;
+                            if (inBoard(nx, ny)) {
+                                board[nx][ny].piece.isFrozenArea = true;
+                            }
+                        }
+                    }
+                    message = "Freeze Piece activated early!";
+                }
+                player.strategyPoints -= 3;
+                player.remainRemove--;
+                player.removeSuccessRate = Math.min(100, player.removeSuccessRate + 25);
+                waitingForRemove = false;
+                if (checkWin(x, y)) {
+                    message = (currentPlayer == 0 ? "Black" : "White") + " wins!";
+                    gameOver = true;
+                    repaint();
+                    return;
+                }
                 nextTurn();
             } else {
-                message = "Can only remove enemy piece or obstacle!";
+                player.strategyPoints -= 3;
+                player.remainRemove--;
+                message = "Remove failed! (" + player.removeSuccessRate + "% chance)";
+                player.removeSuccessRate = Math.min(100, player.removeSuccessRate + 25);
+                waitingForRemove = false;
+                nextTurn();
             }
             repaint();
             return;
         }
         if (waitingForBomb) {
-            cell.piece = new BombPiece(currentPlayer);
-            player.strategyPoints -= 5;
-            message = "Bomb placed! You can continue to move.";
+            pendingBombX = x;
+            pendingBombY = y;
+            bombDelay = 3;
+            players[currentPlayer].strategyPoints -= 5;
+            players[currentPlayer].remainBomb--;
+            message = "Bomb Piece will activate in 3 turns!";
             waitingForBomb = false;
-            bombWaitX = x;
-            bombWaitY = y;
+            if (checkWin(x, y)) {
+                message = (currentPlayer == 0 ? "Black" : "White") + " wins!";
+                gameOver = true;
+                repaint();
+                return;
+            }
+            nextTurn();
             repaint();
             return;
         }
@@ -394,6 +551,50 @@ public class GamePanel extends JPanel implements MouseListener {
         effectManager.processTurn();
         // 回合切换
         currentPlayer = 1 - currentPlayer;
+        if (bombDelay > 0) bombDelay--;
+        if (bombDelay == 0 && pendingBombX != -1 && pendingBombY != -1) {
+            // 执行炸弹效果
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    int nx = pendingBombX + dx, ny = pendingBombY + dy;
+                    if (inBoard(nx, ny)) {
+                        Cell c = board[nx][ny];
+                        if (c.piece instanceof FreezePiece) {
+                            c.piece = new EmptyPiece();
+                            c.piece.isFrozenArea = false;
+                            for (int ddx = -1; ddx <= 1; ddx++) {
+                                for (int ddy = -1; ddy <= 1; ddy++) {
+                                    int nnx = nx + ddx, nny = ny + ddy;
+                                    if (inBoard(nnx, nny)) {
+                                        board[nnx][nny].piece.isFrozenArea = false;
+                                    }
+                                }
+                            }
+                        } else {
+                            c.piece = new EmptyPiece();
+                        }
+                    }
+                }
+            }
+            triggerBombEffect();
+            pendingBombX = pendingBombY = -1;
+        }
+        if (freezeDelay > 0) freezeDelay--;
+        if (freezeDelay == 0 && pendingFreezeX != -1 && pendingFreezeY != -1) {
+            // 执行冰冻效果
+            board[pendingFreezeX][pendingFreezeY].piece = new FreezePiece(currentPlayer, 5);
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    int nx = pendingFreezeX + dx, ny = pendingFreezeY + dy;
+                    if (inBoard(nx, ny)) {
+                        board[nx][ny].piece.isFrozenArea = true;
+                    }
+                }
+            }
+            message = "Freeze Piece activated!";
+            pendingFreezeX = pendingFreezeY = -1;
+        }
+        refreshButtonStatus();
     }
 
     public boolean inBoard(int x, int y) {
@@ -402,20 +603,23 @@ public class GamePanel extends JPanel implements MouseListener {
 
     public boolean checkWin(int x, int y) {
         ChessPiece t = board[x][y].piece;
-        if (t instanceof NormalPiece) return false;
+        if (!(t instanceof NormalPiece)) return false;
+        int owner = t.owner;
         int[][] dirs = {{1,0},{0,1},{1,1},{1,-1}};
         for (int[] d : dirs) {
             int cnt = 1;
             for (int k = 1; k < 5; k++) {
                 int nx = x + d[0]*k, ny = y + d[1]*k;
                 if (!inBoard(nx, ny)) break;
-                if (board[nx][ny].piece instanceof NormalPiece && !board[nx][ny].piece.isFrozenArea) cnt++;
+                ChessPiece p = board[nx][ny].piece;
+                if (p instanceof NormalPiece && !p.isFrozenArea && p.owner == owner) cnt++;
                 else break;
             }
             for (int k = 1; k < 5; k++) {
                 int nx = x - d[0]*k, ny = y - d[1]*k;
                 if (!inBoard(nx, ny)) break;
-                if (board[nx][ny].piece instanceof NormalPiece && !board[nx][ny].piece.isFrozenArea) cnt++;
+                ChessPiece p = board[nx][ny].piece;
+                if (p instanceof NormalPiece && !p.isFrozenArea && p.owner == owner) cnt++;
                 else break;
             }
             if (cnt >= 5) return true;
@@ -443,7 +647,7 @@ public class GamePanel extends JPanel implements MouseListener {
         players[1].isMyTurn = false;
         waitingForFreeze = false;
         waitingForBomb = false;
-        waitingForAnnihilate = false;
+        waitingForRemove = false;
         waitingForObstacle = false;
         waitingForOverride = false;
         freezeWaitPlayer = -1;
@@ -454,19 +658,45 @@ public class GamePanel extends JPanel implements MouseListener {
         bombWaitY = -1;
         message = "";
         gameOver = false;
+        players[0].usedBomb = false;
+        players[0].usedFreeze = false;
+        players[0].usedRemove = false;
+        players[1].usedBomb = false;
+        players[1].usedFreeze = false;
+        players[1].usedRemove = false;
+        pendingBombX = pendingBombY = -1;
+        bombDelay = 0;
+        pendingFreezeX = pendingFreezeY = -1;
+        freezeDelay = 0;
+        players[0].remainObstacle = 5;
+        players[0].remainFreeze = 3;
+        players[0].remainBomb = 3;
+        players[0].remainRemove = 3;
+        players[0].remainOverride = 3;
+        players[0].removeSuccessRate = 25;
+        players[1].remainObstacle = 5;
+        players[1].remainFreeze = 3;
+        players[1].remainBomb = 3;
+        players[1].remainRemove = 3;
+        players[1].remainOverride = 3;
+        players[1].removeSuccessRate = 25;
+        refreshButtonStatus();
     }
 
     // 展示游戏规则方法
     private void showGameRules() {
         String rules = "Gomoku Ultra Rules and Special Pieces:\n" +
-                "1. Normal Piece (Black/White): Gain 1 strategy point per move.\n" +
-                "2. Obstacle Piece: Costs 2 points, place on an empty cell, lasts 4 turns in total, you can continue to move after placing.\n" +
-                "3. Freeze Piece: Costs 5 points, place anywhere, lasts 5 turns, freezes a 3x3 area. Enemy pieces in the area cannot form a line, and both sides cannot place pieces in the area.\n" +
-                "4. Annihilate Piece: Costs 2 points, remove an enemy normal or obstacle piece.\n" +
-                "5. Bomb Piece: Costs 5 points, place anywhere, instantly destroys all pieces in a 3x3 area (if a freeze piece is in the area, it is removed and the area is unfrozen), you can continue to move after placing.\n" +
-                "6. Override Piece: Costs 15 points, place your normal piece anywhere (including freeze area, obstacles, or enemy pieces), overrides the original.\n" +
-                "7. White starts with 1 strategy point.\n" +
-                "8. No moves allowed after someone wins.";
+                "1. Normal Piece: Place to gain 1 strategy point. Five consecutive normal pieces of the same color win.\n" +
+                "2. Obstacle Piece (2 pts, 5 per player): Place on an empty cell to block it for 4 turns. Cannot be placed on frozen or occupied cells.\n" +
+                "3. Freeze Piece (5 pts, 3 per player): Place anywhere. After 3 turns, activates and freezes a 3x3 area for 5 turns. Frozen areas cannot be used for victory, and no pieces can be placed there.\n" +
+                "4. Bomb Piece (5 pts, 3 per player): Place anywhere. After 3 turns, explodes and clears a 3x3 area. If a Freeze Piece is in the area, it is removed and the area is unfrozen.\n" +
+                "5. Remove Piece (3 pts, 3 per player): Attempt to remove any piece (including special pieces and your own). First use has 25% success rate, each subsequent use increases by 25% (max 100%). If used on a pending Bomb/Freeze, also uses probability. If used on a Bomb/Freeze already on the board and fails, 25% chance to trigger its effect immediately.\n" +
+                "6. Override Piece (15 pts, 3 per player): Place your normal piece anywhere (even on special pieces or frozen areas), overriding the original.\n" +
+                "7. Each special piece has a limited number of uses per player per game.\n" +
+                "8. Pending (delayed) Bomb/Freeze can be removed by Remove Piece, also with probability.\n" +
+                "9. Only consecutive Normal Pieces of the same color count for victory. Special pieces do not count.\n" +
+                "10. The game ends immediately when a player forms five consecutive normal pieces of their color.\n" +
+                "11. White starts with 1 strategy point.";
         JOptionPane.showMessageDialog(this, rules, "Game Rules", JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -481,5 +711,13 @@ public class GamePanel extends JPanel implements MouseListener {
         });
         timer.setRepeats(false);
         timer.start();
+    }
+
+    private void refreshButtonStatus() {
+        obstacleStatusLabel.setText(String.valueOf(players[currentPlayer].remainObstacle));
+        freezeStatusLabel.setText(String.valueOf(players[currentPlayer].remainFreeze));
+        bombStatusLabel.setText(String.valueOf(players[currentPlayer].remainBomb));
+        removeStatusLabel.setText(String.valueOf(players[currentPlayer].remainRemove));
+        overrideStatusLabel.setText(String.valueOf(players[currentPlayer].remainOverride));
     }
 } 

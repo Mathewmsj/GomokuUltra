@@ -1,34 +1,48 @@
 # GomokuUltra
 
-五子棋 Ultra 版，支持多种特殊棋子和策略点玩法。
+A feature-rich Gomoku (Five-in-a-Row) game with strategy points and multiple special pieces.
 
-## 玩法简介
-- 普通棋子：每落一子获得1点策略点。
-- 障碍棋、冻结棋、炸弹棋、覆盖棋等特殊棋子，详见游戏内规则说明。
+## Game Overview
+- **Normal Piece**: Place to gain 1 strategy point. Black and White alternate turns. Five consecutive pieces of the same color (not interrupted by any special piece) win the game.
+- **Strategy Points**: Used to activate special pieces.
 
-## 运行方法
+## Special Pieces & Rules
+- **Obstacle Piece** (2 pts, 5 per player): Place on an empty cell to block it for 4 turns. Cannot be placed on frozen areas or occupied cells.
+- **Freeze Piece** (5 pts, 3 per player): Place anywhere. After 3 turns, activates and freezes a 3x3 area for 5 turns. Frozen areas cannot be used for victory, and no pieces can be placed there.
+- **Bomb Piece** (5 pts, 3 per player): Place anywhere. After 3 turns, explodes and clears a 3x3 area. If a Freeze Piece is in the area, it is removed and the area is unfrozen.
+- **Remove Piece** (3 pts, 3 per player): Attempt to remove any piece (including special pieces and your own). First use has 25% success rate, each subsequent use increases by 25% (max 100%). If used on a pending Bomb/Freeze, also uses probability. If used on a Bomb/Freeze already on the board and fails, 25% chance to trigger its effect immediately.
+- **Override Piece** (15 pts, 3 per player): Place your normal piece anywhere (even on special pieces or frozen areas), overriding the original.
+
+## Additional Rules
+- Each special piece has a limited number of uses per player per game (see above).
+- Pending (delayed) Bomb/Freeze can be removed by Remove Piece, also with probability.
+- Only consecutive Normal Pieces of the same color count for victory. Special pieces do not count.
+- The game ends immediately when a player forms five consecutive normal pieces of their color.
+- White starts with 1 strategy point.
+
+## How to Run
 ```bash
-# 编译
+# Compile
 javac -d out src/*.java
-# 运行（假设主类为 Main）
-java -cp out Main
+# Run (assuming the main class is GomokuGame)
+java -cp out GomokuGame
 ```
 
-## 依赖环境
-- JDK 8 及以上
-- Java Swing（标准库）
+## Requirements
+- JDK 8 or above
+- Java Swing (Standard Library)
 
-## 项目结构示例
+## Project Structure Example
 ```
 GomokuUltra/
-├── src/                # 源代码目录，存放 .java 文件
-├── out/                # 编译输出目录，存放 .class 文件（不上传）
-├── dist/               # 发布目录，存放 jar 文件
-├── assets/             # 资源文件（如图片、音效等，若有）
+├── src/                # Source code (.java files)
+├── out/                # Compiled output (.class files, not uploaded)
+├── dist/               # Release directory (jar files)
+├── assets/             # Resources (images, sounds, etc., if any)
 ├── .gitignore
 ├── README.md
 ├── LICENSE
 ```
 
-## 作者
-- [你的名字](https://github.com/你的GitHub用户名) 
+## Author
+- [Your Name](https://github.com/YourGitHubUsername) 
